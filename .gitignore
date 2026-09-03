@@ -1,0 +1,5 @@
+# ignore .pkl files
+tempCodeRunnerFile.py
+data
+tempCodeRunnerFile*
+.idea
