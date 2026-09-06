@@ -3,3 +3,7 @@ tempCodeRunnerFile.py
 data
 tempCodeRunnerFile*
 .idea
+.venv
+.streamlit/secrets.toml
+__pycache__/
+data.pkl

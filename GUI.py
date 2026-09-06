@@ -37,11 +37,11 @@ class FinMonitorGUI:
         style.configure("Treeview.Heading", font=("Arial", 10, "bold"), background="#e0e0e0")
 
         try:
-            cesta_k_datum = get_resource_path("points_2025.pkl")
+            cesta_k_datum = get_resource_path("points.pkl")
             with open(cesta_k_datum, "rb") as f:
                 self.points: pd.DataFrame = pickle.load(f)
         except FileNotFoundError:
-            messagebox.showerror("Chyba", "Soubor points_2025.pkl nebyl nalezen.")
+            messagebox.showerror("Chyba", "Soubor points.pkl nebyl nalezen.")
             self.root.destroy()
             return
 
@@ -183,14 +183,23 @@ class FinMonitorGUI:
         self.tree.insert("", "end", values=("", "", "")) 
         self.tree.insert("", "end", values=("FINANČNÍ UKAZATELE", "Hodnota", "Body"), tags=('header',))
 
-        ratios = self.points.columns[5:17]
-        for idx, ratio in enumerate(ratios):
+        ratios = self.points.columns[6:18]
+        idx = 0
+        for ratio in ratios:
+            if ratio == "Daň_z_nemovitosti_na_jednoho_obyvatele":
+                tax_total = mun_year_data.get("Daň_z_nemovitosti", None)
+                tax_total_val = round(tax_total / 1_000_000, 2) if pd.notna(tax_total) else "N/A"
+                tag = 'oddrow' if idx % 2 == 0 else 'evenrow'
+                self.tree.insert("", "end", values=("Daň z nemovitosti (mil. Kč)", tax_total_val, "-"), tags=(tag,))
+                idx += 1
+
             val = round(mun_year_data[ratio], 2) if pd.notna(mun_year_data[ratio]) else "N/A"
             score_col = f"{ratio}_score"
             score_val = mun_year_data.get(score_col, "N/A")
             
             tag = 'oddrow' if idx % 2 == 0 else 'evenrow'
             self.tree.insert("", "end", values=(ratio, val, score_val), tags=(tag,))
+            idx += 1
 
         self.tree.insert("", "end", values=("", "", "")) 
         final_score = mun_year_data.get("Finální_skóre", "N/A")

@@ -50,7 +50,7 @@ bins_val = st.sidebar.number_input("Počet Bins:", min_value=10, max_value=100, 
 x_min = st.sidebar.number_input("Osa X od:", value=None, placeholder="Automaticky")
 x_max = st.sidebar.number_input("Osa X do:", value=None, placeholder="Automaticky")
 
-analyze_btn = st.sidebar.button("Analyzovat", type="primary", use_container_width=True)
+analyze_btn = st.sidebar.button("Analyzovat", type="primary", width='stretch')
 
 # 4. POMOCNÁ FUNKCE PRO VÝPOČET MEZÍ GRAFU
 def get_auto_bounds(data, mun_val, user_xmin, user_xmax):
@@ -119,15 +119,21 @@ if analyze_btn or query:
                     st.markdown("---")
                     st.subheader("Finanční Ukazatele")
                     
-                    ratios = points.columns[5:17]
+                    ratios = points.columns[6:18]
                     table_data = []
                     for ratio in ratios:
+                        if ratio == "Daň_z_nemovitosti_na_jednoho_obyvatele":
+                            tax_total = mun_year_data.get("Daň_z_nemovitosti", None)
+                            tax_total_val = round(tax_total / 1_000_000, 2) if pd.notna(tax_total) else "N/A"
+                            table_data.append({"Atribut nebo Ukazatel": "Daň z nemovitosti (mil. Kč)", "Hodnota": tax_total_val, "Získané body": None})
+
                         val = round(mun_year_data[ratio], 2) if pd.notna(mun_year_data[ratio]) else "N/A"
                         score_col = f"{ratio}_score"
                         score_val = mun_year_data.get(score_col, "N/A")
                         table_data.append({"Atribut nebo Ukazatel": ratio.replace("_", " "), "Hodnota": val, "Získané body": score_val})
                     
-                    st.dataframe(pd.DataFrame(table_data), use_container_width=True, hide_index=True)
+                    table_df = pd.DataFrame(table_data)
+                    st.dataframe(table_df, hide_index=True, height=(len(table_df) + 1) * 35 + 3)
 
                     final_score = mun_year_data.get("Finální_skóre", "N/A")
                     st.success(f"### CELKOVÉ FINÁLNÍ SKÓRE: {final_score}")

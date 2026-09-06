@@ -1,10 +1,9 @@
-import pandas as pd
+import argparse
 import pickle
+from pathlib import Path
 
-with open("data.pkl", "rb") as f:
-    data = pickle.load(f)
+import pandas as pd
 
-year = int(input("Input year:"))
 
 def add_a_category(df: pd.DataFrame) -> pd.DataFrame:
     category: list[int|float] = [0, 100, 200, 500, 1000, 
@@ -224,26 +223,27 @@ def quick_liquidity(df: pd.DataFrame) -> pd.DataFrame:
 
 def PPE_tax(df: pd.DataFrame) -> pd.DataFrame:
     df['Daň_z_nemovitosti'] = df['1511']
+    df['Daň_z_nemovitosti_na_jednoho_obyvatele'] = df['1511'] / df['Number_of_citizens']
 
     return df
 
 
-def clean_ratios(df: pd.DataFrame) -> pd.DataFrame:
-    essential_columns = df.columns[:5].to_list()
+def clean_ratios(df: pd.DataFrame, year: int) -> pd.DataFrame:
+    essential_columns = df.columns[:5].to_list() + ['Daň_z_nemovitosti']
     ratios_to_keep = ['Celkové_příjmy_na_jednoho_obyvatele', 'Daňové_příjmy_na_jednoho_obyvatele',
                         'Finanční_nezávislost', 'Finanční_soběstačnost', 'Výše_dluhu_k_saldu_běžného_rozpočtu',
                         'Krytí_dluhu_provozním_přebytkem', 'Krytí_kapitálových_výdajů_investičními_transfery', 'Pravidlo_rozpočtové_odpovědnosti',
-                        'Podíl_cizích_zdrojů_na_aktivech', 'Běžná_likvidita', 'Rychlá_likvidita', 'Daň_z_nemovitosti']
+                        'Podíl_cizích_zdrojů_na_aktivech', 'Běžná_likvidita', 'Rychlá_likvidita', 'Daň_z_nemovitosti_na_jednoho_obyvatele']
     columns_to_keep = essential_columns + ratios_to_keep
 
     df = df[columns_to_keep]
-    df = df[df['Year'].isin([1999 + year, 2000 + year])]
+    df = df[df['Year'].isin([year - 1, year])]
     df = df.dropna(subset=['Běžná_likvidita'])
 
     return df
 
 
-def ratios_pipeline(df: pd.DataFrame) -> pd.DataFrame:
+def ratios_pipeline(df: pd.DataFrame, year: int) -> pd.DataFrame:
     df_with_ratios = (
         df.pipe(add_a_category)
         .pipe(earnings_per_citizen_ratio)
@@ -258,10 +258,44 @@ def ratios_pipeline(df: pd.DataFrame) -> pd.DataFrame:
         .pipe(casual_liquidity)
         .pipe(quick_liquidity)
         .pipe(PPE_tax)  
-        .pipe(clean_ratios))
+        .pipe(clean_ratios, year))
     
     return df_with_ratios
 
-    
-with open("ratios.pkl", "wb") as f:
-    pickle.dump(ratios_pipeline(data).round(2), f)
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description='Spočítá poměrové ukazatele obcí z data.pkl a uloží je do ratios.pkl.')
+    parser.add_argument('--year', type=int, required=True,
+                        help='poslední analyzovaný rok, čtyřmístně (např. 2025)')
+    parser.add_argument('--input', type=Path, default=Path('data.pkl'),
+                        help='vstupní pickle z data_cleaning_script.py (výchozí: data.pkl)')
+    parser.add_argument('--output', type=Path, default=Path('ratios.pkl'),
+                        help='výstupní pickle soubor (výchozí: ratios.pkl)')
+
+    return parser.parse_args()
+
+
+def main() -> None:
+    args = parse_args()
+
+    if args.year < 1000:
+        raise SystemExit('--year musí být čtyřmístný rok, např. 2025')
+    if not args.input.is_file():
+        raise SystemExit(f'Soubor {args.input} neexistuje')
+
+    with open(args.input, 'rb') as f:
+        data = pickle.load(f)
+
+    print(f'Počítám ukazatele za roky {args.year - 1}-{args.year} z {args.input}')
+
+    df_with_ratios = ratios_pipeline(data, args.year).round(2)
+
+    with open(args.output, 'wb') as f:
+        pickle.dump(df_with_ratios, f)
+
+    print(f'Uloženo {len(df_with_ratios)} řádků do {args.output}')
+
+
+if __name__ == '__main__':
+    main()
