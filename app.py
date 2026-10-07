@@ -53,6 +53,17 @@ x_max = st.sidebar.number_input("Osa X do:", value=None, placeholder="Automatick
 analyze_btn = st.sidebar.button("Analyzovat", type="primary", width='stretch')
 
 # 4. POMOCNÁ FUNKCE PRO VÝPOČET MEZÍ GRAFU
+def mean_without_outliers(data):
+    if data.empty:
+        return None
+    Q1 = data.quantile(0.25)
+    Q3 = data.quantile(0.75)
+    IQR = Q3 - Q1
+    filtered = data[(data >= Q1 - 1.5 * IQR) & (data <= Q3 + 1.5 * IQR)]
+    if filtered.empty:
+        return None
+    return float(filtered.mean())
+
 def get_auto_bounds(data, mun_val, user_xmin, user_xmax):
     if data.empty:
         return user_xmin, user_xmax
@@ -136,7 +147,11 @@ if analyze_btn or query:
                     st.dataframe(table_df, hide_index=True, height=(len(table_df) + 1) * 35 + 3)
 
                     final_score = mun_year_data.get("Finální_skóre", "N/A")
-                    st.success(f"### CELKOVÉ FINÁLNÍ SKÓRE: {final_score}")
+                    category_mean = mean_without_outliers(category_data["Finální_skóre"].dropna())
+                    category_mean_val = round(category_mean, 2) if pd.notna(category_mean) else "N/A"
+                    col_score, col_mean = st.columns(2)
+                    col_score.success(f"### CELKOVÉ FINÁLNÍ SKÓRE: {final_score}")
+                    col_mean.info(f"### Průměrná obec v kategorii: {category_mean_val}")
 
                 # --- ZÁLOŽKA 2: 12 GRAFŮ ---
                 with tab2:
@@ -150,7 +165,8 @@ if analyze_btn or query:
                         ax = axes[i]
                         data = category_data[ratio].dropna()
                         mun_val = mun_year_data.get(ratio, None)
-                        
+                        mean_val = mean_without_outliers(data)
+
                         final_xmin, final_xmax = get_auto_bounds(data, mun_val, x_min, x_max)
                         
                         if final_xmin is not None and final_xmax is not None:
@@ -161,14 +177,20 @@ if analyze_btn or query:
 
                         ax.hist(hist_data, bins=bins_val, color='#245375', edgecolor='white')
                         ax.set_title(ratio.replace("_"," "), fontsize=9)
-                        
+
+                        if pd.notna(mean_val):
+                            ax.axvline(mean_val, color='#2871ED', linestyle='-', linewidth=2, label='Průměrná obec v kategorii')
                         if pd.notna(mun_val):
-                            ax.axvline(mun_val, color='#FF6130', linestyle='--', linewidth=3)
+                            ax.axvline(mun_val, color='#FF6130', linestyle='--', linewidth=3, label='Zkoumaná obec')
 
                         if final_xmin is not None and final_xmax is not None:
                             padding = (final_xmax - final_xmin) * 0.05
                             if padding == 0: padding = 1
                             ax.set_xlim(left=final_xmin - padding, right=final_xmax + padding)
+
+                    handles, labels = axes[0].get_legend_handles_labels()
+                    if handles:
+                        fig.legend(handles, labels, loc='lower center', ncol=2, fontsize=9, frameon=False)
 
                     st.pyplot(fig)
 
@@ -181,7 +203,8 @@ if analyze_btn or query:
                     final_col = "Finální_skóre"
                     data_final = category_data[final_col].dropna()
                     mun_val_final = mun_year_data.get(final_col, None)
-                    
+                    mean_val_final = mean_without_outliers(data_final)
+
                     final_xmin, final_xmax = get_auto_bounds(data_final, mun_val_final, x_min, x_max)
 
                     if final_xmin is not None and final_xmax is not None:
@@ -193,8 +216,12 @@ if analyze_btn or query:
                     ax_final.hist(hist_data_final, bins=bins_val, color='#245375', edgecolor='white')
                     ax_final.set_title("Finální Skóre", fontsize=14)
                     
+                    if pd.notna(mean_val_final):
+                        ax_final.axvline(mean_val_final, color='#2871ED', linestyle='-', linewidth=3, label=f'Průměrná obec v kategorii ({round(mean_val_final, 2)})')
                     if pd.notna(mun_val_final):
-                        ax_final.axvline(mun_val_final, color='#FF6130', linestyle='--', linewidth=5)
+                        ax_final.axvline(mun_val_final, color='#FF6130', linestyle='--', linewidth=5, label=f'Zkoumaná obec ({mun_val_final})')
+                    if pd.notna(mean_val_final) or pd.notna(mun_val_final):
+                        ax_final.legend(loc='upper left', fontsize=10)
 
                     if final_xmin is not None and final_xmax is not None:
                         padding = (final_xmax - final_xmin) * 0.05
