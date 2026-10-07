@@ -88,6 +88,11 @@ class FinMonitorGUI:
         self.x_max_entry = ttk.Entry(self.sidebar)
         self.x_max_entry.pack(fill="x", padx=10, pady=2)
 
+        self.show_mean_var = tk.BooleanVar(value=True)
+        ttk.Style().configure("TCheckbutton", background="white", font=("Arial", 10))
+        ttk.Checkbutton(self.sidebar, text="Zobrazit průměrnou obec v kategorii",
+                        variable=self.show_mean_var).pack(anchor="w", padx=10, pady=(10, 2))
+
         ttk.Button(self.sidebar, text="Analyzovat", command=self.analyze).pack(fill="x", padx=10, pady=30)
 
         self.notebook = ttk.Notebook(self.main_area)
@@ -203,12 +208,15 @@ class FinMonitorGUI:
 
         self.tree.insert("", "end", values=("", "", "")) 
         final_score = mun_year_data.get("Finální_skóre", "N/A")
-        category_mean = self.mean_without_outliers(category_data["Finální_skóre"].dropna())
-        category_mean_val = f"Průměr kategorie: {round(category_mean, 2)}" if pd.notna(category_mean) else "Průměr kategorie: N/A"
+        show_mean = self.show_mean_var.get()
+        category_mean_val = ""
+        if show_mean:
+            category_mean = self.mean_without_outliers(category_data["Finální_skóre"].dropna())
+            category_mean_val = f"Průměr kategorie: {round(category_mean, 2)}" if pd.notna(category_mean) else "Průměr kategorie: N/A"
         self.tree.insert("", "end", values=("CELKOVÉ FINÁLNÍ SKÓRE", category_mean_val, final_score), tags=('final',))
 
-        self.draw_12_distributions(category_data, ratios, mun_year_data, bins_val, x_min, x_max)
-        self.draw_final_distribution(category_data, "Finální_skóre", mun_year_data, bins_val, x_min, x_max)
+        self.draw_12_distributions(category_data, ratios, mun_year_data, bins_val, x_min, x_max, show_mean)
+        self.draw_final_distribution(category_data, "Finální_skóre", mun_year_data, bins_val, x_min, x_max, show_mean)
 
         self.notebook.select(self.tab_table)
 
@@ -248,7 +256,7 @@ class FinMonitorGUI:
         
         return final_xmin, final_xmax
 
-    def draw_12_distributions(self, cat_data, ratios, mun_data, bins_val, x_min, x_max):
+    def draw_12_distributions(self, cat_data, ratios, mun_data, bins_val, x_min, x_max, show_mean=True):
         if self.canvas_dist:
             self.canvas_dist.get_tk_widget().destroy()
 
@@ -261,7 +269,7 @@ class FinMonitorGUI:
             ax = axes[i]
             data = cat_data[ratio].dropna()
             mun_val = mun_data.get(ratio, None)
-            mean_val = self.mean_without_outliers(data)
+            mean_val = self.mean_without_outliers(data) if show_mean else None
 
             final_xmin, final_xmax = self.get_auto_bounds(data, mun_val, x_min, x_max)
             
@@ -295,7 +303,7 @@ class FinMonitorGUI:
         self.canvas_dist.get_tk_widget().pack(fill="both", expand=True)
         plt.close(fig)
 
-    def draw_final_distribution(self, cat_data, final, mun_data, bins_val, x_min, x_max):
+    def draw_final_distribution(self, cat_data, final, mun_data, bins_val, x_min, x_max, show_mean=True):
         if self.canvas_final:
             self.canvas_final.get_tk_widget().destroy()
 
@@ -304,7 +312,7 @@ class FinMonitorGUI:
 
         data = cat_data[final].dropna()
         mun_val = mun_data.get(final, None)
-        mean_val = self.mean_without_outliers(data)
+        mean_val = self.mean_without_outliers(data) if show_mean else None
 
         final_xmin, final_xmax = self.get_auto_bounds(data, mun_val, x_min, x_max)
 

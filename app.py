@@ -49,6 +49,7 @@ bins_val = st.sidebar.number_input("Počet Bins:", min_value=10, max_value=100, 
 # Umožníme nechat osu X prázdnou pro automatické přizpůsobení
 x_min = st.sidebar.number_input("Osa X od:", value=None, placeholder="Automaticky")
 x_max = st.sidebar.number_input("Osa X do:", value=None, placeholder="Automaticky")
+show_mean = st.sidebar.checkbox("Zobrazit průměrnou obec v kategorii", value=True)
 
 analyze_btn = st.sidebar.button("Analyzovat", type="primary", width='stretch')
 
@@ -147,11 +148,14 @@ if analyze_btn or query:
                     st.dataframe(table_df, hide_index=True, height=(len(table_df) + 1) * 35 + 3)
 
                     final_score = mun_year_data.get("Finální_skóre", "N/A")
-                    category_mean = mean_without_outliers(category_data["Finální_skóre"].dropna())
-                    category_mean_val = round(category_mean, 2) if pd.notna(category_mean) else "N/A"
-                    col_score, col_mean = st.columns(2)
-                    col_score.success(f"### CELKOVÉ FINÁLNÍ SKÓRE: {final_score}")
-                    col_mean.info(f"### Průměrná obec v kategorii: {category_mean_val}")
+                    if show_mean:
+                        category_mean = mean_without_outliers(category_data["Finální_skóre"].dropna())
+                        category_mean_val = round(category_mean, 2) if pd.notna(category_mean) else "N/A"
+                        col_score, col_mean = st.columns(2)
+                        col_score.success(f"### CELKOVÉ FINÁLNÍ SKÓRE: {final_score}")
+                        col_mean.info(f"### Průměrná obec v kategorii: {category_mean_val}")
+                    else:
+                        st.success(f"### CELKOVÉ FINÁLNÍ SKÓRE: {final_score}")
 
                 # --- ZÁLOŽKA 2: 12 GRAFŮ ---
                 with tab2:
@@ -165,7 +169,7 @@ if analyze_btn or query:
                         ax = axes[i]
                         data = category_data[ratio].dropna()
                         mun_val = mun_year_data.get(ratio, None)
-                        mean_val = mean_without_outliers(data)
+                        mean_val = mean_without_outliers(data) if show_mean else None
 
                         final_xmin, final_xmax = get_auto_bounds(data, mun_val, x_min, x_max)
                         
@@ -203,7 +207,7 @@ if analyze_btn or query:
                     final_col = "Finální_skóre"
                     data_final = category_data[final_col].dropna()
                     mun_val_final = mun_year_data.get(final_col, None)
-                    mean_val_final = mean_without_outliers(data_final)
+                    mean_val_final = mean_without_outliers(data_final) if show_mean else None
 
                     final_xmin, final_xmax = get_auto_bounds(data_final, mun_val_final, x_min, x_max)
 
