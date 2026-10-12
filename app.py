@@ -55,7 +55,6 @@ bins_val = st.sidebar.number_input("Počet Bins:", min_value=10, max_value=100, 
 x_min = st.sidebar.number_input("Osa X od:", value=None, placeholder="Automaticky")
 x_max = st.sidebar.number_input("Osa X do:", value=None, placeholder="Automaticky")
 show_mean = st.sidebar.checkbox("Zobrazit průměrnou obec v kategorii", value=True)
-show_titles = st.sidebar.checkbox("Zobrazit titulky v grafech", value=False)
 
 analyze_btn = st.sidebar.button("Analyzovat", type="primary", width='stretch')
 
@@ -96,7 +95,7 @@ def format_number(value):
         text = "0"
     return text.replace(".", ",")
 
-def plot_distribution(data, mun_val, title, subtitle, show_title, show_mean, bins, user_xmin, user_xmax):
+def plot_distribution(data, mun_val, show_mean, bins, user_xmin, user_xmax):
     fig, ax = plt.subplots(figsize=EXPORT_FIGSIZE, constrained_layout=True)
     fig.patch.set_facecolor('white')
 
@@ -129,9 +128,6 @@ def plot_distribution(data, mun_val, title, subtitle, show_title, show_mean, bin
     ax.tick_params(axis='both', labelsize=14)
     ax.set_ylabel("Počet obcí", fontsize=14)
     ax.spines[['top', 'right']].set_visible(False)
-
-    if show_title:
-        fig.suptitle(f"{title}\n{subtitle}", fontsize=18)
 
     return fig
 
@@ -223,15 +219,13 @@ if analyze_btn or query:
                 # --- ZÁLOŽKA 2: 12 GRAFŮ ---
                 with tab2:
                     st.subheader("Distribuce v rámci kategorie")
-                    mun_name = str(mun_year_data['Name']).strip() if 'Name' in mun_year_data else mun_year_data['ICO']
-                    subtitle = f"{mun_name} · {vybrany_rok} · kategorie {category}"
                     file_prefix = f"{mun_year_data['ICO']}_{vybrany_rok}"
 
                     cols = st.columns(3)
                     for i, ratio in enumerate(ratios):
                         title = ratio.replace("_", " ")
                         fig = plot_distribution(category_data[ratio].dropna(), mun_year_data.get(ratio, None),
-                                                title, subtitle, show_titles, show_mean, bins_val, x_min, x_max)
+                                                show_mean, bins_val, x_min, x_max)
                         with cols[i % 3]:
                             st.markdown(f"**{title}**")
                             render_chart(figure_to_png(fig), f"{file_prefix}_{ratio}.png", f"download_{ratio}")
@@ -241,5 +235,5 @@ if analyze_btn or query:
                     st.subheader("Distribuce finálního skóre")
                     final_col = "Finální_skóre"
                     fig_final = plot_distribution(category_data[final_col].dropna(), mun_year_data.get(final_col, None),
-                                                  "Finální skóre", subtitle, show_titles, show_mean, bins_val, x_min, x_max)
+                                                  show_mean, bins_val, x_min, x_max)
                     render_chart(figure_to_png(fig_final), f"{file_prefix}_{final_col}.png", f"download_{final_col}")
