@@ -1,7 +1,12 @@
 import streamlit as st
 import pandas as pd
 import pickle
+import io
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator, FuncFormatter
+
+EXPORT_FIGSIZE = (10, 5.625)
+EXPORT_DPI = 200
 
 # 1. NASTAVENÍ STRÁNKY
 st.set_page_config(page_title="Finanční Monitor Obcí", layout="wide")
@@ -50,6 +55,7 @@ bins_val = st.sidebar.number_input("Počet Bins:", min_value=10, max_value=100, 
 x_min = st.sidebar.number_input("Osa X od:", value=None, placeholder="Automaticky")
 x_max = st.sidebar.number_input("Osa X do:", value=None, placeholder="Automaticky")
 show_mean = st.sidebar.checkbox("Zobrazit průměrnou obec v kategorii", value=True)
+show_titles = st.sidebar.checkbox("Zobrazit titulky v grafech", value=False)
 
 analyze_btn = st.sidebar.button("Analyzovat", type="primary", width='stretch')
 
@@ -81,6 +87,63 @@ def get_auto_bounds(data, mun_val, user_xmin, user_xmax):
     final_xmin = user_xmin if user_xmin is not None else auto_xmin
     final_xmax = user_xmax if user_xmax is not None else auto_xmax
     return final_xmin, final_xmax
+
+def format_number(value):
+    if abs(value) >= 1000:
+        return f"{value:,.0f}".replace(",", " ")
+    text = f"{value:.2f}".rstrip("0").rstrip(".")
+    if text == "-0":
+        text = "0"
+    return text.replace(".", ",")
+
+def plot_distribution(data, mun_val, title, subtitle, show_title, show_mean, bins, user_xmin, user_xmax):
+    fig, ax = plt.subplots(figsize=EXPORT_FIGSIZE, constrained_layout=True)
+    fig.patch.set_facecolor('white')
+
+    mean_val = mean_without_outliers(data) if show_mean else None
+    final_xmin, final_xmax = get_auto_bounds(data, mun_val, user_xmin, user_xmax)
+
+    if final_xmin is not None and final_xmax is not None:
+        hist_data = data[(data >= final_xmin) & (data <= final_xmax)]
+        if hist_data.empty: hist_data = data
+    else:
+        hist_data = data
+
+    ax.hist(hist_data, bins=bins, color='#245375', edgecolor='white')
+
+    if pd.notna(mean_val):
+        ax.axvline(mean_val, color='#2871ED', linestyle='-', linewidth=3, label=f'Průměrná obec v kategorii ({format_number(mean_val)})')
+    if pd.notna(mun_val):
+        ax.axvline(mun_val, color='#FF6130', linestyle='--', linewidth=4, label=f'Zkoumaná obec ({format_number(mun_val)})')
+    if pd.notna(mean_val) or pd.notna(mun_val):
+        ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.12), ncol=2, fontsize=14, frameon=False)
+
+    if final_xmin is not None and final_xmax is not None:
+        padding = (final_xmax - final_xmin) * 0.05
+        if padding == 0: padding = 1
+        ax.set_xlim(left=final_xmin - padding, right=final_xmax + padding)
+
+    ax.xaxis.set_major_locator(MaxNLocator(nbins=6))
+    ax.xaxis.set_major_formatter(FuncFormatter(lambda x, pos: format_number(x)))
+    ax.yaxis.set_major_locator(MaxNLocator(nbins=5, integer=True))
+    ax.tick_params(axis='both', labelsize=14)
+    ax.set_ylabel("Počet obcí", fontsize=14)
+    ax.spines[['top', 'right']].set_visible(False)
+
+    if show_title:
+        fig.suptitle(f"{title}\n{subtitle}", fontsize=18)
+
+    return fig
+
+def figure_to_png(fig):
+    buffer = io.BytesIO()
+    fig.savefig(buffer, format='png', dpi=EXPORT_DPI, facecolor='white')
+    plt.close(fig)
+    return buffer.getvalue()
+
+def render_chart(png, file_name, key):
+    st.image(png)
+    st.download_button("Stáhnout PNG", data=png, file_name=file_name, mime="image/png", key=key, on_click="ignore")
 
 # 5. HLAVNÍ ČÁST APLIKACE A LOGIKA
 st.title("Finanční Monitor Obcí")
@@ -160,76 +223,23 @@ if analyze_btn or query:
                 # --- ZÁLOŽKA 2: 12 GRAFŮ ---
                 with tab2:
                     st.subheader("Distribuce v rámci kategorie")
-                    fig, axes = plt.subplots(4, 3, figsize=(12, 10))
-                    fig.patch.set_facecolor('white')
-                    plt.subplots_adjust(hspace=0.5, wspace=0.3)
-                    axes = axes.flatten()
+                    mun_name = str(mun_year_data['Name']).strip() if 'Name' in mun_year_data else mun_year_data['ICO']
+                    subtitle = f"{mun_name} · {vybrany_rok} · kategorie {category}"
+                    file_prefix = f"{mun_year_data['ICO']}_{vybrany_rok}"
 
+                    cols = st.columns(3)
                     for i, ratio in enumerate(ratios):
-                        ax = axes[i]
-                        data = category_data[ratio].dropna()
-                        mun_val = mun_year_data.get(ratio, None)
-                        mean_val = mean_without_outliers(data) if show_mean else None
-
-                        final_xmin, final_xmax = get_auto_bounds(data, mun_val, x_min, x_max)
-                        
-                        if final_xmin is not None and final_xmax is not None:
-                            hist_data = data[(data >= final_xmin) & (data <= final_xmax)]
-                            if hist_data.empty: hist_data = data
-                        else:
-                            hist_data = data
-
-                        ax.hist(hist_data, bins=bins_val, color='#245375', edgecolor='white')
-                        ax.set_title(ratio.replace("_"," "), fontsize=9)
-
-                        if pd.notna(mean_val):
-                            ax.axvline(mean_val, color='#2871ED', linestyle='-', linewidth=2, label='Průměrná obec v kategorii')
-                        if pd.notna(mun_val):
-                            ax.axvline(mun_val, color='#FF6130', linestyle='--', linewidth=3, label='Zkoumaná obec')
-
-                        if final_xmin is not None and final_xmax is not None:
-                            padding = (final_xmax - final_xmin) * 0.05
-                            if padding == 0: padding = 1
-                            ax.set_xlim(left=final_xmin - padding, right=final_xmax + padding)
-
-                    handles, labels = axes[0].get_legend_handles_labels()
-                    if handles:
-                        fig.legend(handles, labels, loc='lower center', ncol=2, fontsize=9, frameon=False)
-
-                    st.pyplot(fig)
+                        title = ratio.replace("_", " ")
+                        fig = plot_distribution(category_data[ratio].dropna(), mun_year_data.get(ratio, None),
+                                                title, subtitle, show_titles, show_mean, bins_val, x_min, x_max)
+                        with cols[i % 3]:
+                            st.markdown(f"**{title}**")
+                            render_chart(figure_to_png(fig), f"{file_prefix}_{ratio}.png", f"download_{ratio}")
 
                 # --- ZÁLOŽKA 3: FINÁLNÍ SKÓRE GRAF ---
                 with tab3:
                     st.subheader("Distribuce finálního skóre")
-                    fig_final, ax_final = plt.subplots(figsize=(8, 6))
-                    fig_final.patch.set_facecolor('white')
-
                     final_col = "Finální_skóre"
-                    data_final = category_data[final_col].dropna()
-                    mun_val_final = mun_year_data.get(final_col, None)
-                    mean_val_final = mean_without_outliers(data_final) if show_mean else None
-
-                    final_xmin, final_xmax = get_auto_bounds(data_final, mun_val_final, x_min, x_max)
-
-                    if final_xmin is not None and final_xmax is not None:
-                        hist_data_final = data_final[(data_final >= final_xmin) & (data_final <= final_xmax)]
-                        if hist_data_final.empty: hist_data_final = data_final
-                    else:
-                        hist_data_final = data_final
-
-                    ax_final.hist(hist_data_final, bins=bins_val, color='#245375', edgecolor='white')
-                    ax_final.set_title("Finální Skóre", fontsize=14)
-                    
-                    if pd.notna(mean_val_final):
-                        ax_final.axvline(mean_val_final, color='#2871ED', linestyle='-', linewidth=3, label=f'Průměrná obec v kategorii ({round(mean_val_final, 2)})')
-                    if pd.notna(mun_val_final):
-                        ax_final.axvline(mun_val_final, color='#FF6130', linestyle='--', linewidth=5, label=f'Zkoumaná obec ({mun_val_final})')
-                    if pd.notna(mean_val_final) or pd.notna(mun_val_final):
-                        ax_final.legend(loc='upper left', fontsize=10)
-
-                    if final_xmin is not None and final_xmax is not None:
-                        padding = (final_xmax - final_xmin) * 0.05
-                        if padding == 0: padding = 1
-                        ax_final.set_xlim(left=final_xmin - padding, right=final_xmax + padding)
-
-                    st.pyplot(fig_final)
+                    fig_final = plot_distribution(category_data[final_col].dropna(), mun_year_data.get(final_col, None),
+                                                  "Finální skóre", subtitle, show_titles, show_mean, bins_val, x_min, x_max)
+                    render_chart(figure_to_png(fig_final), f"{file_prefix}_{final_col}.png", f"download_{final_col}")
