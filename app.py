@@ -175,7 +175,7 @@ if analyze_btn or query:
                 category_data = points[(points['Category'] == category) & (points['Year'] == vybrany_rok)]
 
                 # Vytvoření záložek
-                tab1, tab2, tab3 = st.tabs(["Data Tabulka", "12 Ukazatelů", "Finální Skóre"])
+                tab1, tab2, tab3 = st.tabs(["Data Tabulka", "13 Ukazatelů", "Finální Skóre"])
 
                 # --- ZÁLOŽKA 1: TABULKA ---
                 with tab1:
@@ -190,7 +190,7 @@ if analyze_btn or query:
                     st.markdown("---")
                     st.subheader("Finanční Ukazatele")
                     
-                    ratios = points.columns[6:18]
+                    ratios = points.columns[6:19]
                     table_data = []
                     for ratio in ratios:
                         if ratio == "Daň_z_nemovitosti_na_jednoho_obyvatele":
@@ -216,7 +216,7 @@ if analyze_btn or query:
                     else:
                         st.success(f"### CELKOVÉ FINÁLNÍ SKÓRE: {final_score}")
 
-                # --- ZÁLOŽKA 2: 12 GRAFŮ ---
+                # --- ZÁLOŽKA 2: 13 GRAFŮ ---
                 with tab2:
                     st.subheader("Distribuce v rámci kategorie")
                     file_prefix = f"{mun_year_data['ICO']}_{vybrany_rok}"

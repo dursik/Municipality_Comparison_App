@@ -124,6 +124,14 @@ def liabilities_to_balance(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def operating_surplus_after_interest(df: pd.DataFrame) -> pd.DataFrame:
+    df['Provozní_přebytek_po_úrocích'] = (df['Běžné_příjmy'] - df['Běžné_výdaje'] -
+                                          df[['5141', '5144']].sum(axis=1))
+    df['Provozní_přebytek_po_úrocích_na_jednoho_obyvatele'] = df['Provozní_přebytek_po_úrocích'] / df['Number_of_citizens']
+
+    return df
+
+
 def liabilities_to_surplus(df: pd.DataFrame) -> pd.DataFrame:
     wanted_accounts_A = ('3',)
     not_wanted_accounts_A = ("3121",)
@@ -233,7 +241,8 @@ def clean_ratios(df: pd.DataFrame, year: int) -> pd.DataFrame:
     ratios_to_keep = ['Celkové_příjmy_na_jednoho_obyvatele', 'Daňové_příjmy_na_jednoho_obyvatele',
                         'Finanční_nezávislost', 'Finanční_soběstačnost', 'Výše_dluhu_k_saldu_běžného_rozpočtu',
                         'Krytí_dluhu_provozním_přebytkem', 'Krytí_kapitálových_výdajů_investičními_transfery', 'Pravidlo_rozpočtové_odpovědnosti',
-                        'Podíl_cizích_zdrojů_na_aktivech', 'Běžná_likvidita', 'Rychlá_likvidita', 'Daň_z_nemovitosti_na_jednoho_obyvatele']
+                        'Podíl_cizích_zdrojů_na_aktivech', 'Běžná_likvidita', 'Rychlá_likvidita', 'Daň_z_nemovitosti_na_jednoho_obyvatele',
+                        'Provozní_přebytek_po_úrocích_na_jednoho_obyvatele']
     columns_to_keep = essential_columns + ratios_to_keep
 
     df = df[columns_to_keep]
@@ -251,6 +260,7 @@ def ratios_pipeline(df: pd.DataFrame, year: int) -> pd.DataFrame:
         .pipe(financial_independency)
         .pipe(financial_self_sufficiency)
         .pipe(liabilities_to_balance)
+        .pipe(operating_surplus_after_interest)
         .pipe(liabilities_to_surplus)
         .pipe(capital_expenses_coverage)
         .pipe(total_liabilities_to_assets)
