@@ -37,6 +37,10 @@ def appending_ratio_logic(col_name: str,
     return col_name.startswith(wanted_accounts) and not col_name.startswith(not_wanted_accounts)
 
 
+def safe_divide(numerator: pd.Series, denominator: pd.Series) -> pd.Series:
+    return numerator / denominator.where(denominator != 0)
+
+
 def earnings_per_citizen_ratio(df: pd.DataFrame) -> pd.DataFrame:
     wanted_accounts = ('1','2','3','4')
     not_wanted_accounts = ('4132','4133','4134','4135','4136','4137','4138','4139')
@@ -44,7 +48,7 @@ def earnings_per_citizen_ratio(df: pd.DataFrame) -> pd.DataFrame:
     all_computational_accounts = [i for i in df.columns 
                                   if appending_ratio_logic(i,wanted_accounts,not_wanted_accounts)]
     df['Celkové_příjmy'] = df[all_computational_accounts].sum(axis=1)
-    df['Celkové_příjmy_na_jednoho_obyvatele'] = df['Celkové_příjmy'] / df['Number_of_citizens']
+    df['Celkové_příjmy_na_jednoho_obyvatele'] = safe_divide(df['Celkové_příjmy'], df['Number_of_citizens'])
 
     return df
 
@@ -56,7 +60,7 @@ def tax_earnings_per_citizen(df: pd.DataFrame) -> pd.DataFrame:
     all_computational_accounts = [i for i in df.columns 
                                   if appending_ratio_logic(i,wanted_accounts,not_wanted_accounts)]
     df['Daňové_příjmy'] = df[all_computational_accounts].sum(axis=1)
-    df['Daňové_příjmy_na_jednoho_obyvatele'] = df['Daňové_příjmy'] / df['Number_of_citizens']
+    df['Daňové_příjmy_na_jednoho_obyvatele'] = safe_divide(df['Daňové_příjmy'], df['Number_of_citizens'])
 
     return df
 
@@ -75,7 +79,7 @@ def financial_independency(df: pd.DataFrame) -> pd.DataFrame:
     all_clean_earnings_accounts = [i for i in df.columns
                                   if appending_ratio_logic(i,wanted_accounts_B, not_wanted_accounts_B)]
     df['Čisté_běžné_příjmy'] =  df[all_clean_earnings_accounts].sum(axis=1)
-    df['Finanční_nezávislost'] = (df['Vlastní_příjmy'] / df['Čisté_běžné_příjmy'])*100
+    df['Finanční_nezávislost'] = safe_divide(df['Vlastní_příjmy'], df['Čisté_běžné_příjmy']) * 100
 
     return df
 
@@ -95,7 +99,7 @@ def financial_self_sufficiency(df: pd.DataFrame) -> pd.DataFrame:
                                   if appending_ratio_logic(i,wanted_accounts_B, not_wanted_accounts_B)]
     df['Čisté_běžné_výdaje']= (df[all_computational_accounts_A].sum(axis=1) - 
                                    df[all_computational_accounts_B].sum(axis = 1))
-    df['Finanční_soběstačnost'] = (df['Vlastní_příjmy'] / df['Čisté_běžné_výdaje']) * 100
+    df['Finanční_soběstačnost'] = safe_divide(df['Vlastní_příjmy'], df['Čisté_běžné_výdaje']) * 100
 
     return df
 
@@ -119,7 +123,7 @@ def liabilities_to_balance(df: pd.DataFrame) -> pd.DataFrame:
     df['Běžné_příjmy'] = df[all_computational_accounts_A].sum(axis=1)
     df['Celkové_závazky'] = df['D. = -'] - df[['D.I. = -', 'D.III.36. = 384','D.III.35. = 383']].sum(axis=1)
     df['Běžné_výdaje'] = df[all_computational_accounts_B].sum(axis=1)
-    df['Výše_dluhu_k_saldu_běžného_rozpočtu'] = df['Celkové_závazky'] / (df['Běžné_příjmy'] - df['Běžné_výdaje'])
+    df['Výše_dluhu_k_saldu_běžného_rozpočtu'] = safe_divide(df['Celkové_závazky'], df['Běžné_příjmy'] - df['Běžné_výdaje'])
 
     return df
 
@@ -127,7 +131,7 @@ def liabilities_to_balance(df: pd.DataFrame) -> pd.DataFrame:
 def operating_surplus_after_interest(df: pd.DataFrame) -> pd.DataFrame:
     df['Provozní_přebytek_po_úrocích'] = (df['Běžné_příjmy'] - df['Běžné_výdaje'] -
                                           df[['5141', '5144']].sum(axis=1))
-    df['Provozní_přebytek_po_úrocích_na_jednoho_obyvatele'] = df['Provozní_přebytek_po_úrocích'] / df['Number_of_citizens']
+    df['Provozní_přebytek_po_úrocích_na_jednoho_obyvatele'] = safe_divide(df['Provozní_přebytek_po_úrocích'], df['Number_of_citizens'])
 
     return df
 
@@ -140,7 +144,8 @@ def liabilities_to_surplus(df: pd.DataFrame) -> pd.DataFrame:
                                   if appending_ratio_logic(i,wanted_accounts_A, not_wanted_accounts_A)]
     
     df['PPE_prodáno']= df[all_computational_accounts_A].sum(axis=1)
-    df['Krytí_dluhu_provozním_přebytkem'] = df['Celkové_závazky'] / (df['Čisté_běžné_příjmy'] - df['Čisté_běžné_výdaje'] - df['PPE_prodáno'])
+    df['Krytí_dluhu_provozním_přebytkem'] = safe_divide(df['Celkové_závazky'],
+                                                        df['Čisté_běžné_příjmy'] - df['Čisté_běžné_výdaje'] - df['PPE_prodáno'])
 
     return df
 
@@ -153,8 +158,7 @@ def capital_expenses_coverage(df: pd.DataFrame) -> pd.DataFrame:
                                   if appending_ratio_logic(i,wanted_accounts_A, not_wanted_accounts_A)]
     
     df['Kapitálové_výdaje'] = df[all_computational_accounts_A].sum(axis=1)
-    df['Kapitálové_výdaje'] = df['Kapitálové_výdaje'].replace(0,1)
-    
+
     wanted_accounts_B = ('42',)
     not_wanted_accounts_B = ()
     
@@ -162,7 +166,7 @@ def capital_expenses_coverage(df: pd.DataFrame) -> pd.DataFrame:
                                   if appending_ratio_logic(i,wanted_accounts_B, not_wanted_accounts_B)]
     
     df['Investiční_kapitálové_příjmy'] = df[all_computational_accounts_B].sum(axis=1)
-    df['Krytí_kapitálových_výdajů_investičními_transfery'] = (df['Investiční_kapitálové_příjmy'] / df['Kapitálové_výdaje'])*100
+    df['Krytí_kapitálových_výdajů_investičními_transfery'] = safe_divide(df['Investiční_kapitálové_příjmy'], df['Kapitálové_výdaje']) * 100
 
     return df
 
@@ -202,13 +206,13 @@ def add_moving_average_income(df: pd.DataFrame) -> pd.DataFrame:
 
 def budget_responsibility(df: pd.DataFrame) -> pd.DataFrame:
     df = df.pipe(total_debt).pipe(add_moving_average_income)
-    df['Pravidlo_rozpočtové_odpovědnosti'] = (df['Dluh'] / df['Průměr_příjmů']) * 100
+    df['Pravidlo_rozpočtové_odpovědnosti'] = safe_divide(df['Dluh'], df['Průměr_příjmů']) * 100
 
     return df
 
 
 def total_liabilities_to_assets(df: pd.DataFrame) -> pd.DataFrame:
-    df['Podíl_cizích_zdrojů_na_aktivech'] = (df['D. = -'] / df['AKTIVA = -'])*100 
+    df['Podíl_cizích_zdrojů_na_aktivech'] = safe_divide(df['D. = -'], df['AKTIVA = -']) * 100
     
     return df
 
@@ -217,21 +221,21 @@ def casual_liquidity(df: pd.DataFrame) -> pd.DataFrame:
     nominator = (df[['B.III. = -','B.II. = -', 'B.I. = -', 'A.IV. = -']].sum(axis=1) -
                  df[['B.II.31. = 385','B.II.30. = 381']].sum(axis=1))
     denominator = df['D.III. = -'] - df[['D.III.36. = 384','D.III.35. = 383']].sum(axis=1)
-    df['Běžná_likvidita'] = nominator / denominator
+    df['Běžná_likvidita'] = safe_divide(nominator, denominator)
 
     return df
 
 
 def quick_liquidity(df: pd.DataFrame) -> pd.DataFrame:
-    df['Rychlá_likvidita'] = df['B.III. = -'] / (df['D.III. = -'] - 
-                            df[['D.III.36. = 384','D.III.35. = 383']].sum(axis=1))
+    df['Rychlá_likvidita'] = safe_divide(df['B.III. = -'], df['D.III. = -'] -
+                                         df[['D.III.36. = 384','D.III.35. = 383']].sum(axis=1))
 
     return df
 
 
 def PPE_tax(df: pd.DataFrame) -> pd.DataFrame:
     df['Daň_z_nemovitosti'] = df['1511']
-    df['Daň_z_nemovitosti_na_jednoho_obyvatele'] = df['1511'] / df['Number_of_citizens']
+    df['Daň_z_nemovitosti_na_jednoho_obyvatele'] = safe_divide(df['1511'], df['Number_of_citizens'])
 
     return df
 
@@ -245,9 +249,9 @@ def clean_ratios(df: pd.DataFrame, year: int) -> pd.DataFrame:
                         'Provozní_přebytek_po_úrocích_na_jednoho_obyvatele']
     columns_to_keep = essential_columns + ratios_to_keep
 
+    df = df.dropna(subset=['AKTIVA = -'])
     df = df[columns_to_keep]
     df = df[df['Year'].isin([year - 1, year])]
-    df = df.dropna(subset=['Běžná_likvidita'])
 
     return df
 

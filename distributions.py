@@ -151,7 +151,10 @@ def check_ratio_weights(list_of_ratios: list[str]) -> None:
 def final_score(df: pd.DataFrame) -> pd.DataFrame:
     scoring_columns = [f'{ratio}_score' for ratio in ratio_weights]
     weights = np.array(list(ratio_weights.values()))
-    df['Finální_skóre'] = df[scoring_columns].dot(weights).round(1)
+    scores = df[scoring_columns]
+    weighted_sum = scores.fillna(0).dot(weights)
+    available_weight = scores.notna().dot(weights)
+    df['Finální_skóre'] = (weighted_sum / available_weight.where(available_weight != 0)).round(1)
 
     return df
 
