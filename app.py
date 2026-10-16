@@ -200,13 +200,17 @@ if analyze_btn or query:
 
                         val = round(mun_year_data[ratio], 2) if pd.notna(mun_year_data[ratio]) else "N/A"
                         score_col = f"{ratio}_score"
-                        score_val = mun_year_data.get(score_col, "N/A")
+                        if score_col in mun_year_data:
+                            score_val = mun_year_data[score_col] if pd.notna(mun_year_data[score_col]) else "N/A"
+                        else:
+                            score_val = None
                         table_data.append({"Atribut nebo Ukazatel": ratio.replace("_", " "), "Hodnota": val, "Získané body": score_val})
                     
                     table_df = pd.DataFrame(table_data)
                     st.dataframe(table_df, hide_index=True, height=(len(table_df) + 1) * 35 + 3)
 
-                    final_score = mun_year_data.get("Finální_skóre", "N/A")
+                    final_score = mun_year_data.get("Finální_skóre", None)
+                    final_score = final_score if pd.notna(final_score) else "N/A"
                     if show_mean:
                         category_mean = mean_without_outliers(category_data["Finální_skóre"].dropna())
                         category_mean_val = round(category_mean, 2) if pd.notna(category_mean) else "N/A"

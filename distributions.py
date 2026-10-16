@@ -112,6 +112,8 @@ def assign_points(year: int, category: str,
     percentiles_df_year = percentiles_category[percentiles_category['Year'] == year]
 
     for i in list_of_ratios:
+        if ratio_weights[i] == 0:
+            continue
         basket = list(percentiles_df_year[str(i)].values)
         data: pd.Series = df_year.loc[:,str(i)]
 
@@ -149,8 +151,9 @@ def check_ratio_weights(list_of_ratios: list[str]) -> None:
 
 
 def final_score(df: pd.DataFrame) -> pd.DataFrame:
-    scoring_columns = [f'{ratio}_score' for ratio in ratio_weights]
-    weights = np.array(list(ratio_weights.values()))
+    scored_weights = {ratio: weight for ratio, weight in ratio_weights.items() if weight != 0}
+    scoring_columns = [f'{ratio}_score' for ratio in scored_weights]
+    weights = np.array(list(scored_weights.values()))
     scores = df[scoring_columns]
     weighted_sum = scores.fillna(0).dot(weights)
     available_weight = scores.notna().dot(weights)
