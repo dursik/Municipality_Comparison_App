@@ -54,7 +54,7 @@ bins_val = st.sidebar.number_input("Počet Bins:", min_value=10, max_value=100, 
 # Umožníme nechat osu X prázdnou pro automatické přizpůsobení
 x_min = st.sidebar.number_input("Osa X od:", value=None, placeholder="Automaticky")
 x_max = st.sidebar.number_input("Osa X do:", value=None, placeholder="Automaticky")
-show_mean = st.sidebar.checkbox("Zobrazit průměrné město/obec v kategorii", value=True)
+show_mean = st.sidebar.checkbox("Zobrazit průměrnou obec v kategorii", value=True)
 
 analyze_btn = st.sidebar.button("Analyzovat", type="primary", width='stretch')
 
@@ -147,7 +147,7 @@ st.title("Finanční Monitor měst a obcí")
 # Spustíme analýzu, pokud uživatel klikl na tlačítko, nebo už má něco vyhledáno
 if analyze_btn or query:
     if not query.strip():
-        st.warning("Prosím zadej IČO nebo název města/obce v levém panelu.")
+        st.warning("Prosím zadej IČO nebo název obce v levém panelu.")
     else:
         query = query.strip()
         
@@ -162,13 +162,13 @@ if analyze_btn or query:
                 st.stop()
 
         if municipality_data.empty:
-            st.info("Zadané město/obec nebo IČO nebylo nalezeno.")
+            st.info("Zadaná obec nebo IČO nebylo nalezeno.")
         else:
             vybrany_rok = int(vybrany_rok_str)
             mun_year_data_df = municipality_data[municipality_data['Year'] == vybrany_rok]
             
             if mun_year_data_df.empty:
-                st.warning(f"Pro zadané město/obec nejsou v roce {vybrany_rok} dostupná žádná data.")
+                st.warning(f"Pro zadanou obec nejsou v roce {vybrany_rok} dostupná žádná data.")
             else:
                 mun_year_data = mun_year_data_df.iloc[0]
                 category = mun_year_data['Category']
@@ -216,7 +216,7 @@ if analyze_btn or query:
                         category_mean_val = round(category_mean, 2) if pd.notna(category_mean) else "N/A"
                         col_score, col_mean = st.columns(2)
                         col_score.success(f"### CELKOVÉ FINÁLNÍ SKÓRE: {final_score}")
-                        col_mean.info(f"### Průměrné město/obec v kategorii: {category_mean_val}")
+                        col_mean.info(f"### Průměrná obec v kategorii: {category_mean_val}")
                     else:
                         st.success(f"### CELKOVÉ FINÁLNÍ SKÓRE: {final_score}")
 
