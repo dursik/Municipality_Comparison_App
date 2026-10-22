@@ -111,9 +111,9 @@ def plot_distribution(data, mun_val, show_mean, bins, user_xmin, user_xmax):
     ax.hist(hist_data, bins=bins, color='#245375', edgecolor='white')
 
     if pd.notna(mean_val):
-        ax.axvline(mean_val, color='#2871ED', linestyle='-', linewidth=3, label=f'Průměrná obec v kategorii ({format_number(mean_val)})')
+        ax.axvline(mean_val, color='#2871ED', linestyle='-', linewidth=3, label=f'Průměrné město/obec v kategorii ({format_number(mean_val)})')
     if pd.notna(mun_val):
-        ax.axvline(mun_val, color='#FF6130', linestyle='--', linewidth=4, label=f'Zkoumaná obec ({format_number(mun_val)})')
+        ax.axvline(mun_val, color='#FF6130', linestyle='--', linewidth=4, label=f'Zkoumané město/obec ({format_number(mun_val)})')
     if pd.notna(mean_val) or pd.notna(mun_val):
         ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.12), ncol=2, fontsize=14, frameon=False)
 
@@ -126,7 +126,7 @@ def plot_distribution(data, mun_val, show_mean, bins, user_xmin, user_xmax):
     ax.xaxis.set_major_formatter(FuncFormatter(lambda x, pos: format_number(x)))
     ax.yaxis.set_major_locator(MaxNLocator(nbins=5, integer=True))
     ax.tick_params(axis='both', labelsize=14)
-    ax.set_ylabel("Počet obcí", fontsize=14)
+    ax.set_ylabel("Počet měst/obcí", fontsize=14)
     ax.spines[['top', 'right']].set_visible(False)
 
     return fig
