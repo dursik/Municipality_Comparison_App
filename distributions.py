@@ -20,7 +20,7 @@ ratio_weights = {
     'Běžná_likvidita': 0.1,
     'Rychlá_likvidita': 0.05,
     'Daň_z_nemovitosti_na_jednoho_obyvatele': 0,
-    'Provozní_přebytek_po_úrocích_na_jednoho_obyvatele': 0}
+    'Běžný_provozní_přebytek_po_úrocích_na_jednoho_obyvatele': 0}
 IQR_parameter = 1.5
 
 

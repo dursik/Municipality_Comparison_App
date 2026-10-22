@@ -129,9 +129,9 @@ def liabilities_to_balance(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def operating_surplus_after_interest(df: pd.DataFrame) -> pd.DataFrame:
-    df['Provozní_přebytek_po_úrocích'] = (df['Běžné_příjmy'] - df['Běžné_výdaje'] -
-                                          df[['5141', '5144']].sum(axis=1))
-    df['Provozní_přebytek_po_úrocích_na_jednoho_obyvatele'] = safe_divide(df['Provozní_přebytek_po_úrocích'], df['Number_of_citizens'])
+    df['Běžný_provozní_přebytek_po_úrocích'] = (df['Běžné_příjmy'] - df['Běžné_výdaje'] -
+                                                df[['5141', '5144']].sum(axis=1))
+    df['Běžný_provozní_přebytek_po_úrocích_na_jednoho_obyvatele'] = safe_divide(df['Běžný_provozní_přebytek_po_úrocích'], df['Number_of_citizens'])
 
     return df
 
@@ -246,7 +246,7 @@ def clean_ratios(df: pd.DataFrame, year: int) -> pd.DataFrame:
                         'Finanční_nezávislost', 'Finanční_soběstačnost', 'Výše_dluhu_k_saldu_běžného_rozpočtu',
                         'Krytí_dluhu_provozním_přebytkem', 'Krytí_kapitálových_výdajů_investičními_transfery', 'Pravidlo_rozpočtové_odpovědnosti',
                         'Podíl_cizích_zdrojů_na_aktivech', 'Běžná_likvidita', 'Rychlá_likvidita', 'Daň_z_nemovitosti_na_jednoho_obyvatele',
-                        'Provozní_přebytek_po_úrocích_na_jednoho_obyvatele']
+                        'Běžný_provozní_přebytek_po_úrocích_na_jednoho_obyvatele']
     columns_to_keep = essential_columns + ratios_to_keep
 
     df = df.dropna(subset=['AKTIVA = -'])
