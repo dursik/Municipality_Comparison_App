@@ -171,6 +171,28 @@ def capital_expenses_coverage(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def capital_expenses_to_total_income(df: pd.DataFrame) -> pd.DataFrame:
+    df['Podíl_kapitálových_výdajů_na_celkových_příjmech'] = safe_divide(df['Kapitálové_výdaje'], df['Celkové_příjmy']) * 100
+
+    return df
+
+
+def current_budget_per_citizen(df: pd.DataFrame) -> pd.DataFrame:
+    df['Běžné_příjmy_na_jednoho_obyvatele'] = safe_divide(df['Běžné_příjmy'], df['Number_of_citizens'])
+    df['Běžné_výdaje_na_jednoho_obyvatele'] = safe_divide(df['Běžné_výdaje'], df['Number_of_citizens'])
+    df['Čisté_běžné_příjmy_na_jednoho_obyvatele'] = safe_divide(df['Čisté_běžné_příjmy'], df['Number_of_citizens'])
+
+    return df
+
+
+def disposable_funds(df: pd.DataFrame) -> pd.DataFrame:
+    account_columns = ['B.III.11. = 231', 'B.III.12. = 236', 'B.III.9. = 241', 'B.III.4. = 244', 'B.III.17. = 261']
+    df['Disponibilní_prostředky_na_účtech'] = df[account_columns].sum(axis=1)
+    df['Disponibilní_prostředky_na_účtech_na_jednoho_obyvatele'] = safe_divide(df['Disponibilní_prostředky_na_účtech'], df['Number_of_citizens'])
+
+    return df
+
+
 def total_debt(df: pd.DataFrame) -> pd.DataFrame:
     wanted_accounts = ('D.III.1. = 281', 'D.III.2. = 282', 'D.III.3. = 283', 'D.III.4. = 289',
                       'D.III.6. = 322', 'D.III.9. = 326', 'D.III.27. = 362', 'D.II.1. = 451',
@@ -246,7 +268,12 @@ def clean_ratios(df: pd.DataFrame, year: int) -> pd.DataFrame:
                         'Finanční_nezávislost', 'Finanční_soběstačnost', 'Výše_dluhu_k_saldu_běžného_rozpočtu',
                         'Krytí_dluhu_provozním_přebytkem', 'Krytí_kapitálových_výdajů_investičními_transfery', 'Pravidlo_rozpočtové_odpovědnosti',
                         'Podíl_cizích_zdrojů_na_aktivech', 'Běžná_likvidita', 'Rychlá_likvidita', 'Daň_z_nemovitosti_na_jednoho_obyvatele',
-                        'Běžný_provozní_přebytek_po_úrocích_na_jednoho_obyvatele']
+                        'Běžný_provozní_přebytek_po_úrocích_na_jednoho_obyvatele',
+                        'Běžné_příjmy', 'Běžné_příjmy_na_jednoho_obyvatele',
+                        'Běžné_výdaje', 'Běžné_výdaje_na_jednoho_obyvatele',
+                        'Čisté_běžné_příjmy', 'Čisté_běžné_příjmy_na_jednoho_obyvatele',
+                        'Podíl_kapitálových_výdajů_na_celkových_příjmech',
+                        'Disponibilní_prostředky_na_účtech', 'Disponibilní_prostředky_na_účtech_na_jednoho_obyvatele']
     columns_to_keep = essential_columns + ratios_to_keep
 
     df = df.dropna(subset=['AKTIVA = -'])
@@ -267,6 +294,9 @@ def ratios_pipeline(df: pd.DataFrame, year: int) -> pd.DataFrame:
         .pipe(operating_surplus_after_interest)
         .pipe(liabilities_to_surplus)
         .pipe(capital_expenses_coverage)
+        .pipe(capital_expenses_to_total_income)
+        .pipe(current_budget_per_citizen)
+        .pipe(disposable_funds)
         .pipe(total_liabilities_to_assets)
         .pipe(budget_responsibility)
         .pipe(casual_liquidity)

@@ -20,7 +20,16 @@ ratio_weights = {
     'Běžná_likvidita': 0.1,
     'Rychlá_likvidita': 0.05,
     'Daň_z_nemovitosti_na_jednoho_obyvatele': 0,
-    'Běžný_provozní_přebytek_po_úrocích_na_jednoho_obyvatele': 0}
+    'Běžný_provozní_přebytek_po_úrocích_na_jednoho_obyvatele': 0,
+    'Běžné_příjmy': 0,
+    'Běžné_příjmy_na_jednoho_obyvatele': 0,
+    'Běžné_výdaje': 0,
+    'Běžné_výdaje_na_jednoho_obyvatele': 0,
+    'Čisté_běžné_příjmy': 0,
+    'Čisté_běžné_příjmy_na_jednoho_obyvatele': 0,
+    'Podíl_kapitálových_výdajů_na_celkových_příjmech': 0,
+    'Disponibilní_prostředky_na_účtech': 0,
+    'Disponibilní_prostředky_na_účtech_na_jednoho_obyvatele': 0}
 IQR_parameter = 1.5
 
 

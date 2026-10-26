@@ -7,6 +7,7 @@ from matplotlib.ticker import MaxNLocator, FuncFormatter
 
 EXPORT_FIGSIZE = (10, 5.625)
 EXPORT_DPI = 200
+MILLION_CZK_RATIOS = {"Běžné_příjmy", "Běžné_výdaje", "Čisté_běžné_příjmy", "Disponibilní_prostředky_na_účtech"}
 
 # 1. NASTAVENÍ STRÁNKY
 st.set_page_config(page_title="Finanční Monitor měst a obcí", layout="wide")
@@ -131,6 +132,15 @@ def plot_distribution(data, mun_val, show_mean, bins, user_xmin, user_xmax):
 
     return fig
 
+def ratio_title(ratio):
+    title = ratio.replace("_", " ")
+    if ratio in MILLION_CZK_RATIOS:
+        title += " (mil. Kč)"
+    return title
+
+def ratio_scale(ratio):
+    return 1_000_000 if ratio in MILLION_CZK_RATIOS else 1
+
 def figure_to_png(fig):
     buffer = io.BytesIO()
     fig.savefig(buffer, format='png', dpi=EXPORT_DPI, facecolor='white')
@@ -175,7 +185,9 @@ if analyze_btn or query:
                 category_data = points[(points['Category'] == category) & (points['Year'] == vybrany_rok)]
 
                 # Vytvoření záložek
-                tab1, tab2, tab3 = st.tabs(["Data Tabulka", "13 Ukazatelů", "Finální Skóre"])
+                ratios = [col for col in points.columns[6:]
+                          if not col.endswith("_score") and col != "Finální_skóre"]
+                tab1, tab2, tab3 = st.tabs(["Data Tabulka", f"{len(ratios)} Ukazatelů", "Finální Skóre"])
 
                 # --- ZÁLOŽKA 1: TABULKA ---
                 with tab1:
@@ -190,7 +202,6 @@ if analyze_btn or query:
                     st.markdown("---")
                     st.subheader("Finanční Ukazatele")
                     
-                    ratios = points.columns[6:19]
                     table_data = []
                     for ratio in ratios:
                         if ratio == "Daň_z_nemovitosti_na_jednoho_obyvatele":
@@ -198,13 +209,13 @@ if analyze_btn or query:
                             tax_total_val = round(tax_total / 1_000_000, 2) if pd.notna(tax_total) else "N/A"
                             table_data.append({"Atribut nebo Ukazatel": "Daň z nemovitosti (mil. Kč)", "Hodnota": tax_total_val, "Získané body": None})
 
-                        val = round(mun_year_data[ratio], 2) if pd.notna(mun_year_data[ratio]) else "N/A"
+                        val = round(mun_year_data[ratio] / ratio_scale(ratio), 2) if pd.notna(mun_year_data[ratio]) else "N/A"
                         score_col = f"{ratio}_score"
                         if score_col in mun_year_data:
                             score_val = mun_year_data[score_col] if pd.notna(mun_year_data[score_col]) else "N/A"
                         else:
                             score_val = None
-                        table_data.append({"Atribut nebo Ukazatel": ratio.replace("_", " "), "Hodnota": val, "Získané body": score_val})
+                        table_data.append({"Atribut nebo Ukazatel": ratio_title(ratio), "Hodnota": val, "Získané body": score_val})
                     
                     table_df = pd.DataFrame(table_data)
                     st.dataframe(table_df, hide_index=True, height=(len(table_df) + 1) * 35 + 3)
@@ -220,18 +231,20 @@ if analyze_btn or query:
                     else:
                         st.success(f"### CELKOVÉ FINÁLNÍ SKÓRE: {final_score}")
 
-                # --- ZÁLOŽKA 2: 13 GRAFŮ ---
+                # --- ZÁLOŽKA 2: GRAFY UKAZATELŮ ---
                 with tab2:
                     st.subheader("Distribuce v rámci kategorie")
                     file_prefix = f"{mun_year_data['ICO']}_{vybrany_rok}"
 
                     cols = st.columns(3)
                     for i, ratio in enumerate(ratios):
-                        title = ratio.replace("_", " ")
-                        fig = plot_distribution(category_data[ratio].dropna(), mun_year_data.get(ratio, None),
+                        scale = ratio_scale(ratio)
+                        mun_val = mun_year_data.get(ratio, None)
+                        mun_val = mun_val / scale if pd.notna(mun_val) else mun_val
+                        fig = plot_distribution(category_data[ratio].dropna() / scale, mun_val,
                                                 show_mean, bins_val, x_min, x_max)
                         with cols[i % 3]:
-                            st.markdown(f"**{title}**")
+                            st.markdown(f"**{ratio_title(ratio)}**")
                             render_chart(figure_to_png(fig), f"{file_prefix}_{ratio}.png", f"download_{ratio}")
 
                 # --- ZÁLOŽKA 3: FINÁLNÍ SKÓRE GRAF ---
