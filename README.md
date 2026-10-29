@@ -37,7 +37,7 @@ python distributions.py
 
 Vznikne tak `data.pkl`, následně `ratios.pkl` a nakonec `percentiles.pkl` a `points.pkl`. GUI i aplikace ve Streamlitu čtou `points.pkl`.
 
-`data_cleaning_script.py` ve výchozím nastavení zahrnuje šest předchozích let (`--years-back`), protože `ratios_script.py` potřebuje čtyřletý průměr příjmů pro vyhodnocení pravidla rozpočtové odpovědnosti. Ukazatele se počítají jen za poslední dva roky.
+`data_cleaning_script.py` i `ratios_script.py` ve výchozím nastavení zahrnují šest předchozích let (`--years-back`), ukazatele a skóre se tedy počítají za všechny tyto roky. Pravidlo rozpočtové odpovědnosti potřebuje čtyřletý průměr příjmů, takže je vyplněné jen pro roky, ke kterým jsou v datech všechny čtyři předchozí roky; u starších let zůstává prázdné a finální skóre se spočítá z ostatních ukazatelů.
 
 Názvy obcí a počty obyvatel se načítají z `FINM_PV.xlsx`, který se očekává ve složce s daty, pokud `--municipalities-file` neurčí jinou cestu. Obec se rozpoznává podle názvu ukončeného závorkou s okresem, což vylučuje součtové řádky za kraje a za celou ČR.
 

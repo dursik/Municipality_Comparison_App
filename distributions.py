@@ -204,7 +204,7 @@ def main() -> None:
         ratios: pd.DataFrame = pickle.load(f)
 
     list_of_categories = list(ratios['Category'].unique())
-    years_to_analyse = sorted(ratios['Year'].unique())[-2:]
+    years_to_analyse = sorted(ratios['Year'].unique())
     list_of_ratios = ratios.columns[6:]
     check_ratio_weights(list_of_ratios)
 

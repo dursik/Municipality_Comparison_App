@@ -207,12 +207,13 @@ def total_debt(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def add_moving_average_income(df: pd.DataFrame) -> pd.DataFrame:
-    all_years = sorted(df['Year'].unique())
-    target_years = all_years[-2:]
-    
+    all_years = set(df['Year'].unique())
+
     results_list: list[pd.DataFrame] = []
-    for target_year in target_years:
+    for target_year in sorted(all_years):
         past_years = [target_year - i for i in range(1, 5)]
+        if not all_years.issuperset(past_years):
+            continue
         df_past = df[df['Year'].isin(past_years)]
         df_summed = df_past.groupby('ICO')['Celkové_příjmy'].sum().reset_index()
         df_summed['Celkové_příjmy'] = df_summed['Celkové_příjmy'] / 4
@@ -262,7 +263,7 @@ def PPE_tax(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def clean_ratios(df: pd.DataFrame, year: int) -> pd.DataFrame:
+def clean_ratios(df: pd.DataFrame, years: list[int]) -> pd.DataFrame:
     essential_columns = df.columns[:5].to_list() + ['Daň_z_nemovitosti']
     ratios_to_keep = ['Celkové_příjmy_na_jednoho_obyvatele', 'Daňové_příjmy_na_jednoho_obyvatele',
                         'Finanční_nezávislost', 'Finanční_soběstačnost', 'Výše_dluhu_k_saldu_běžného_rozpočtu',
@@ -278,12 +279,12 @@ def clean_ratios(df: pd.DataFrame, year: int) -> pd.DataFrame:
 
     df = df.dropna(subset=['AKTIVA = -'])
     df = df[columns_to_keep]
-    df = df[df['Year'].isin([year - 1, year])]
+    df = df[df['Year'].isin(years)]
 
     return df
 
 
-def ratios_pipeline(df: pd.DataFrame, year: int) -> pd.DataFrame:
+def ratios_pipeline(df: pd.DataFrame, years: list[int]) -> pd.DataFrame:
     df_with_ratios = (
         df.pipe(add_a_category)
         .pipe(earnings_per_citizen_ratio)
@@ -302,7 +303,7 @@ def ratios_pipeline(df: pd.DataFrame, year: int) -> pd.DataFrame:
         .pipe(casual_liquidity)
         .pipe(quick_liquidity)
         .pipe(PPE_tax)  
-        .pipe(clean_ratios, year))
+        .pipe(clean_ratios, years))
     
     return df_with_ratios
 
@@ -312,6 +313,8 @@ def parse_args() -> argparse.Namespace:
         description='Spočítá poměrové ukazatele obcí z data.pkl a uloží je do ratios.pkl.')
     parser.add_argument('--year', type=int, required=True,
                         help='poslední analyzovaný rok, čtyřmístně (např. 2025)')
+    parser.add_argument('--years-back', type=int, default=6,
+                        help='kolik let zpět počítat ukazatele (výchozí: 6)')
     parser.add_argument('--input', type=Path, default=Path('data.pkl'),
                         help='vstupní pickle z data_cleaning_script.py (výchozí: data.pkl)')
     parser.add_argument('--output', type=Path, default=Path('ratios.pkl'),
@@ -325,15 +328,18 @@ def main() -> None:
 
     if args.year < 1000:
         raise SystemExit('--year musí být čtyřmístný rok, např. 2025')
+    if args.years_back < 0:
+        raise SystemExit('--years-back nesmí být záporné')
     if not args.input.is_file():
         raise SystemExit(f'Soubor {args.input} neexistuje')
 
     with open(args.input, 'rb') as f:
         data = pickle.load(f)
 
-    print(f'Počítám ukazatele za roky {args.year - 1}-{args.year} z {args.input}')
+    years = list(range(args.year - args.years_back, args.year + 1))
+    print(f'Počítám ukazatele za roky {years[0]}-{years[-1]} z {args.input}')
 
-    df_with_ratios = ratios_pipeline(data, args.year).round(2)
+    df_with_ratios = ratios_pipeline(data, years).round(2)
 
     with open(args.output, 'wb') as f:
         pickle.dump(df_with_ratios, f)
