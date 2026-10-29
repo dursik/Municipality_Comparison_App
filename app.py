@@ -146,7 +146,7 @@ def plot_history(years, mun_values, mean_values, show_mean):
 
     for x, values, color, label in series:
         bars = ax.bar(x, [v if pd.notna(v) else 0 for v in values], width, color=color, label=label)
-        ax.bar_label(bars, labels=[format_number(v) if pd.notna(v) else "N/A" for v in values], fontsize=10, padding=3)
+        ax.bar_label(bars, labels=[format_number(v) if pd.notna(v) else "N/A" for v in values], fontsize=8, padding=3)
 
     ax.axhline(0, color='black', linewidth=0.8)
     ax.set_xticks(positions, [str(year) for year in years])
