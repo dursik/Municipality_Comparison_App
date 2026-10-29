@@ -132,6 +132,34 @@ def plot_distribution(data, mun_val, show_mean, bins, user_xmin, user_xmax):
 
     return fig
 
+def plot_history(years, mun_values, mean_values, show_mean):
+    fig, ax = plt.subplots(figsize=EXPORT_FIGSIZE, constrained_layout=True)
+    fig.patch.set_facecolor('white')
+
+    positions = list(range(len(years)))
+    width = 0.38 if show_mean else 0.6
+    offset = width / 2 if show_mean else 0
+
+    series = [([p - offset for p in positions], mun_values, '#FF6130', 'Zkoumané město/obec')]
+    if show_mean:
+        series.append(([p + offset for p in positions], mean_values, '#2871ED', 'Průměrné město/obec v kategorii'))
+
+    for x, values, color, label in series:
+        bars = ax.bar(x, [v if pd.notna(v) else 0 for v in values], width, color=color, label=label)
+        ax.bar_label(bars, labels=[format_number(v) if pd.notna(v) else "N/A" for v in values], fontsize=12, padding=3)
+
+    ax.axhline(0, color='black', linewidth=0.8)
+    ax.set_xticks(positions, [str(year) for year in years])
+    ax.yaxis.set_major_locator(MaxNLocator(nbins=6))
+    ax.yaxis.set_major_formatter(FuncFormatter(lambda y, pos: format_number(y)))
+    ax.tick_params(axis='both', labelsize=14)
+    ax.set_ylabel("Hodnota", fontsize=14)
+    ax.spines[['top', 'right']].set_visible(False)
+    ax.margins(y=0.15)
+    ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.08), ncol=2, fontsize=14, frameon=False)
+
+    return fig
+
 def ratio_title(ratio):
     title = ratio.replace("_", " ")
     if ratio in MILLION_CZK_RATIOS:
@@ -187,7 +215,7 @@ if analyze_btn or query:
                 # Vytvoření záložek
                 ratios = [col for col in points.columns[6:]
                           if not col.endswith("_score") and col != "Finální_skóre"]
-                tab1, tab2, tab3 = st.tabs(["Data Tabulka", f"{len(ratios)} Ukazatelů", "Finální Skóre"])
+                tab1, tab2, tab3, tab4 = st.tabs(["Data Tabulka", f"{len(ratios)} Ukazatelů", "Finální Skóre", "Vývoj v čase"])
 
                 # --- ZÁLOŽKA 1: TABULKA ---
                 with tab1:
@@ -254,3 +282,23 @@ if analyze_btn or query:
                     fig_final = plot_distribution(category_data[final_col].dropna(), mun_year_data.get(final_col, None),
                                                   show_mean, bins_val, x_min, x_max)
                     render_chart(figure_to_png(fig_final), f"{file_prefix}_{final_col}.png", f"download_{final_col}")
+
+                # --- ZÁLOŽKA 4: VÝVOJ V ČASE ---
+                with tab4:
+                    st.subheader("Vývoj ukazatele v čase")
+                    history_ratio = st.selectbox("Ukazatel:", ratios + ["Finální_skóre"], format_func=ratio_title,
+                                                 key="history_ratio")
+                    scale = ratio_scale(history_ratio)
+                    mun_history = points[points['ICO'] == mun_year_data['ICO']].sort_values('Year')
+
+                    years, mun_values, mean_values = [], [], []
+                    for _, row in mun_history.iterrows():
+                        year_category_data = points[(points['Category'] == row['Category']) & (points['Year'] == row['Year'])]
+                        years.append(int(row['Year']))
+                        mun_values.append(row[history_ratio] / scale if pd.notna(row[history_ratio]) else None)
+                        mean_values.append(mean_without_outliers(year_category_data[history_ratio].dropna() / scale))
+
+                    st.markdown(f"**{ratio_title(history_ratio)}**")
+                    fig_history = plot_history(years, mun_values, mean_values, show_mean)
+                    render_chart(figure_to_png(fig_history), f"{mun_year_data['ICO']}_{history_ratio}_vyvoj.png",
+                                 "download_history")
